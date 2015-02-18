@@ -30,6 +30,7 @@
 /*
  * Main.
  */
+//Comment added for second script task  ASST0
 
 #include <types.h>
 #include <kern/errno.h>
@@ -100,9 +101,10 @@ boot(void)
 	kprintf("%s", harvard_copyright);
 	kprintf("\n");
 
-	kprintf("Put-your-group-name-here's system version %s (%s #%d)\n", 
+	kprintf("pchakkir@buffalo.edu, vmaddipa@buffalo.edu system version %s (%s #%d)\n",
 		GROUP_VERSION, buildconfig, buildversion);
 	kprintf("\n");
+
 
 	/* Early initialization. */
 	ram_bootstrap();
