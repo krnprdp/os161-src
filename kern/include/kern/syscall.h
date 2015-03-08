@@ -197,6 +197,7 @@
 #define SYS_reboot       119
 //#define SYS___sysctl   120
 
+#define hello_world		 121
 /*CALLEND*/
 
 

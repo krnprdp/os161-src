@@ -38,5 +38,6 @@ int
 main()
 {
 	/* Just exit with success. */
+	
 	exit(0);
 }

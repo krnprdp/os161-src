@@ -38,14 +38,13 @@
 
 #include <spinlock.h>
 #include <threadlist.h>
-
+#include <limits.h>
 struct addrspace;
 struct cpu;
 struct vnode;
 
 /* get machine-dependent defs */
 #include <machine/thread.h>
-
 
 /* Size of kernel stacks; must be power of 2 */
 #define STACK_SIZE 4096
@@ -56,14 +55,23 @@ struct vnode;
 /* Macro to test if two addresses are on the same kernel stack */
 #define SAME_STACK(p1, p2)     (((p1) & STACK_MASK) == ((p2) & STACK_MASK))
 
-
 /* States a thread can be in. */
 typedef enum {
-	S_RUN,		/* running */
-	S_READY,	/* ready to run */
-	S_SLEEP,	/* sleeping */
-	S_ZOMBIE,	/* zombie; exited but not yet deleted */
+	S_RUN, /* running */
+	S_READY, /* ready to run */
+	S_SLEEP, /* sleeping */
+	S_ZOMBIE, /* zombie; exited but not yet deleted */
 } threadstate_t;
+
+//typedef enum {
+//	O_RDONLY,		//Open for reading only.
+//	O_WRONLY,		//Open for writing only.
+//	O_RDWR,			//Open for reading and writing
+//	O_CREAT,		//Create the file if it doesn't exist.
+//	O_EXCL,			//Fail if the file already exists.
+//	O_TRUNC,		//Truncate the file to length 0 upon open.
+//	O_APPEND		//Open the file in append mode.
+//} permissions;
 
 /* Thread structure. */
 struct thread {
@@ -71,18 +79,18 @@ struct thread {
 	 * These go up front so they're easy to get to even if the
 	 * debugger is messed up.
 	 */
-	char *t_name;			/* Name of this thread */
-	const char *t_wchan_name;	/* Name of wait channel, if sleeping */
-	threadstate_t t_state;		/* State this thread is in */
+	char *t_name; /* Name of this thread */
+	const char *t_wchan_name; /* Name of wait channel, if sleeping */
+	threadstate_t t_state; /* State this thread is in */
 
 	/*
 	 * Thread subsystem internal fields.
 	 */
 	struct thread_machdep t_machdep; /* Any machine-dependent goo */
 	struct threadlistnode t_listnode; /* Link for run/sleep/zombie lists */
-	void *t_stack;			/* Kernel-level stack */
-	struct switchframe *t_context;	/* Saved register context (on stack) */
-	struct cpu *t_cpu;		/* CPU thread runs on */
+	void *t_stack; /* Kernel-level stack */
+	struct switchframe *t_context; /* Saved register context (on stack) */
+	struct cpu *t_cpu; /* CPU thread runs on */
 
 	/*
 	 * Interrupt state fields.
@@ -97,21 +105,31 @@ struct thread {
 	 * Exercise for the student: why is this material per-thread
 	 * rather than per-cpu or global?
 	 */
-	bool t_in_interrupt;		/* Are we in an interrupt? */
-	int t_curspl;			/* Current spl*() state */
-	int t_iplhigh_count;		/* # of times IPL has been raised */
+	bool t_in_interrupt; /* Are we in an interrupt? */
+	int t_curspl; /* Current spl*() state */
+	int t_iplhigh_count; /* # of times IPL has been raised */
 
 	/*
 	 * Public fields
 	 */
 
 	/* VM */
-	struct addrspace *t_addrspace;	/* virtual address space */
+	struct addrspace *t_addrspace; /* virtual address space */
 
 	/* VFS */
-	struct vnode *t_cwd;		/* current working directory */
+	struct vnode *t_cwd; /* current working directory */
 
 	/* add more here as needed */
+	struct fdesc* t_fdtable[OPEN_MAX];
+};
+
+struct fdesc {
+	char *name;
+	off_t offset;
+	int flag;
+	int ref_count;
+	struct vnode *vn;
+	struct lock *filelock;
 };
 
 /* Call once during system startup to allocate data structures. */
@@ -135,10 +153,8 @@ void thread_shutdown(void);
  * thread should be done only with caution, because in general the
  * child thread might exit at any time.) Returns an error code.
  */
-int thread_fork(const char *name, 
-                void (*func)(void *, unsigned long),
-                void *data1, unsigned long data2, 
-                struct thread **ret);
+int thread_fork(const char *name, void (*func)(void *, unsigned long),
+		void *data1, unsigned long data2, struct thread **ret);
 
 /*
  * Cause the current thread to exit.
@@ -163,6 +179,5 @@ void schedule(void);
  * timer interrupt.
  */
 void thread_consider_migration(void);
-
 
 #endif /* _THREAD_H_ */

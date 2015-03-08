@@ -45,6 +45,26 @@
 #include <syscall.h>
 #include <test.h>
 
+int initiateConsole(){
+
+	struct vnode *vnode_stdin;
+
+	if(vfs_open("con:",O_RDONLY,"",vnode_stdin)){
+		return EINVAL;
+	}
+	curthread->t_fdtable[0] = kmalloc(sizeof(struct fdesc));
+	curthread.t_fdtable[0]->vn = vnode_stdin;
+
+	curthread->t_fdtable.filelock = lock_create("STDIN");
+	curthread->t_fdtable.name = "con:";
+
+	char *stdout;
+	char *stderr;
+
+
+
+}
+
 /*
  * Load program "progname" and start running it in usermode.
  * Does not return except on error.
@@ -58,6 +78,10 @@ runprogram(char *progname)
 	vaddr_t entrypoint, stackptr;
 	int result;
 
+	result = initiateConsole();
+	if (result) {
+		return result;
+	}
 	/* Open the file. */
 	result = vfs_open(progname, O_RDONLY, 0, &v);
 	if (result) {
@@ -101,6 +125,7 @@ runprogram(char *progname)
 	
 	/* enter_new_process does not return. */
 	panic("enter_new_process returned\n");
+
 	return EINVAL;
 }
 
