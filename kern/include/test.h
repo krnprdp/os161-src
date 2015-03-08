@@ -106,7 +106,6 @@ int nettest(int, char **);
 
 /* Routine for running a user-level program. */
 int runprogram(char *progname);
-
 /* Kernel menu system. */
 void menu(char *argstr);
 

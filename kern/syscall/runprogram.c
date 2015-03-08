@@ -44,26 +44,7 @@
 #include <vfs.h>
 #include <syscall.h>
 #include <test.h>
-
-int initiateConsole(){
-
-	struct vnode *vnode_stdin;
-
-	if(vfs_open("con:",O_RDONLY,"",vnode_stdin)){
-		return EINVAL;
-	}
-	curthread->t_fdtable[0] = kmalloc(sizeof(struct fdesc));
-	curthread.t_fdtable[0]->vn = vnode_stdin;
-
-	curthread->t_fdtable.filelock = lock_create("STDIN");
-	curthread->t_fdtable.name = "con:";
-
-	char *stdout;
-	char *stderr;
-
-
-
-}
+#include <synch.h>
 
 /*
  * Load program "progname" and start running it in usermode.
@@ -71,17 +52,57 @@ int initiateConsole(){
  *
  * Calls vfs_open on progname and thus may destroy it.
  */
-int
-runprogram(char *progname)
-{
+int runprogram(char *progname) {
 	struct vnode *v;
 	vaddr_t entrypoint, stackptr;
 	int result;
 
-	result = initiateConsole();
-	if (result) {
-		return result;
+	/*Initialize Console*/
+
+	struct vnode *vnode_stdin;
+	struct vnode *vnode_stdout;
+	struct vnode *vnode_stderr;
+
+	char *consolein;
+	char *consoleout;
+	char *consoleerr;
+
+	consolein = kstrdup("con:");
+	consoleout = kstrdup("con:");
+	consoleerr = kstrdup("con:");
+
+	if (vfs_open(consolein, O_RDONLY, 0, &vnode_stdin)) {
+		return EINVAL;
 	}
+
+	curthread->t_fdtable[0]->name = consolein;
+	curthread->t_fdtable[0]->flag = O_RDONLY;
+	curthread->t_fdtable[0]->ref_count = 1;
+	curthread->t_fdtable[0]->vn = vnode_stdin;
+	curthread->t_fdtable[0]->filelock = lock_create("STDIN");
+
+	if (vfs_open(consoleout, O_WRONLY, 0, &vnode_stdout)) {
+		return EINVAL;
+	}
+
+	curthread->t_fdtable[1]->name = consoleout;
+	curthread->t_fdtable[1]->flag = O_WRONLY;
+	curthread->t_fdtable[1]->ref_count = 1;
+	curthread->t_fdtable[1]->vn = vnode_stdout;
+	curthread->t_fdtable[1]->filelock = lock_create("STDOUT");
+
+	if (vfs_open(consoleerr, O_WRONLY, 0, &vnode_stderr)) {
+		return EINVAL;
+	}
+
+	curthread->t_fdtable[2]->name = consoleerr;
+	curthread->t_fdtable[2]->flag = O_WRONLY;
+	curthread->t_fdtable[2]->ref_count = 1;
+	curthread->t_fdtable[2]->vn = vnode_stderr;
+	curthread->t_fdtable[2]->filelock = lock_create("STDERR");
+
+	/*Console Initialized*/
+
 	/* Open the file. */
 	result = vfs_open(progname, O_RDONLY, 0, &v);
 	if (result) {
@@ -93,7 +114,7 @@ runprogram(char *progname)
 
 	/* Create a new address space. */
 	curthread->t_addrspace = as_create();
-	if (curthread->t_addrspace==NULL) {
+	if (curthread->t_addrspace == NULL ) {
 		vfs_close(v);
 		return ENOMEM;
 	}
@@ -120,9 +141,9 @@ runprogram(char *progname)
 	}
 
 	/* Warp to user mode. */
-	enter_new_process(0 /*argc*/, NULL /*userspace addr of argv*/,
-			  stackptr, entrypoint);
-	
+	enter_new_process(0 /*argc*/, NULL /*userspace addr of argv*/, stackptr,
+			entrypoint);
+
 	/* enter_new_process does not return. */
 	panic("enter_new_process returned\n");
 
