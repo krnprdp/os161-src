@@ -67,32 +67,44 @@ int runprogram(char *progname) {
 	consoleout = kstrdup("con:");
 	consoleerr = kstrdup("con:");
 
-	if (vfs_open(consolein, O_RDONLY, 0, &curthread->t_fdtable[0]->vn)) {
+	curthread->t_fdtable[0] = (struct fdesc*) kmalloc(sizeof(struct fdesc));
+
+	if (vfs_open(consolein, O_RDONLY, 0, &(curthread->t_fdtable[0]->vn))) {
 		return EINVAL;
 	}
-	kfree(consolein);
+
 	curthread->t_fdtable[0]->name = consolein;
 	curthread->t_fdtable[0]->flag = O_RDONLY;
 	curthread->t_fdtable[0]->ref_count = 1;
 	curthread->t_fdtable[0]->filelock = lock_create("STDIN");
 
-	if (vfs_open(consoleout, O_WRONLY, 0, &curthread->t_fdtable[1]->vn)) {
+	kfree(consolein);
+
+	curthread->t_fdtable[1] = (struct fdesc*) kmalloc(sizeof(struct fdesc));
+
+	if (vfs_open(consoleout, O_WRONLY, 0, &(curthread->t_fdtable[0]->vn))) {
 		return EINVAL;
 	}
-	kfree(consoleout);
+
 	curthread->t_fdtable[1]->name = consoleout;
 	curthread->t_fdtable[1]->flag = O_WRONLY;
 	curthread->t_fdtable[1]->ref_count = 1;
 	curthread->t_fdtable[1]->filelock = lock_create("STDOUT");
 
-	if (vfs_open(consoleerr, O_WRONLY, 0, &curthread->t_fdtable[2]->vn)) {
+	kfree(consoleout);
+
+	curthread->t_fdtable[2] = (struct fdesc*) kmalloc(sizeof(struct fdesc));
+
+	if (vfs_open(consoleerr, O_WRONLY, 0, &(curthread->t_fdtable[2]->vn))) {
 		return EINVAL;
 	}
-	kfree(consoleerr);
+
 	curthread->t_fdtable[2]->name = consoleerr;
 	curthread->t_fdtable[2]->flag = O_WRONLY;
 	curthread->t_fdtable[2]->ref_count = 1;
 	curthread->t_fdtable[2]->filelock = lock_create("STDERR");
+
+	kfree(consoleerr);
 
 	/*Console Initialized*/
 
