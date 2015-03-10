@@ -69,7 +69,7 @@ int runprogram(char *progname) {
 
 	curthread->t_fdtable[0] = (struct fdesc*) kmalloc(sizeof(struct fdesc));
 
-	if (vfs_open(consolein, O_RDONLY, 0, &(curthread->t_fdtable[0]->vn))) {
+	if (vfs_open(consolein, O_RDONLY, 0664, &(curthread->t_fdtable[0]->vn))) {
 		return EINVAL;
 	}
 
@@ -82,7 +82,7 @@ int runprogram(char *progname) {
 
 	curthread->t_fdtable[1] = (struct fdesc*) kmalloc(sizeof(struct fdesc));
 
-	if (vfs_open(consoleout, O_WRONLY, 0, &(curthread->t_fdtable[0]->vn))) {
+	if (vfs_open(consoleout, O_WRONLY, 0664, &(curthread->t_fdtable[0]->vn))) {
 		return EINVAL;
 	}
 
@@ -95,7 +95,7 @@ int runprogram(char *progname) {
 
 	curthread->t_fdtable[2] = (struct fdesc*) kmalloc(sizeof(struct fdesc));
 
-	if (vfs_open(consoleerr, O_WRONLY, 0, &(curthread->t_fdtable[2]->vn))) {
+	if (vfs_open(consoleerr, O_WRONLY, 0664, &(curthread->t_fdtable[2]->vn))) {
 		return EINVAL;
 	}
 

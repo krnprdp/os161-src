@@ -35,7 +35,7 @@
 #include <thread.h>
 #include <current.h>
 #include <syscall.h>
-
+#include <copyinout.h> //added for copyin function
 /*
  * System call dispatcher.
  *
@@ -74,10 +74,18 @@
  * stack, starting at sp+16 to skip over the slots for the
  * registerized values, with copyin().
  */
+
 void syscall(struct trapframe *tf) {
 	int callno;
 	int32_t retval;
 	int err;
+
+	/*Added for lseek*/
+	int whence;
+	int high32, low32;
+	off_t pos;
+	off_t retval64;
+	/*Added for lseek*/
 
 	KASSERT(curthread != NULL);
 	KASSERT(curthread->t_curspl == 0);
@@ -95,6 +103,7 @@ void syscall(struct trapframe *tf) {
 	 */
 
 	retval = 0;
+	retval64 = 0;
 
 	switch (callno) {
 	case SYS_reboot:
@@ -106,15 +115,31 @@ void syscall(struct trapframe *tf) {
 		break;
 
 		/* Add stuff here */
+	case hello_world:
+		err = helloworld();
+		break;
 	case SYS_open:
 		err = sys_open((userptr_t) tf->tf_a0, tf->tf_a1, &retval);
 		break;
 	case SYS_close:
 		err = sys_close(tf->tf_a0, &retval);
 		break;
-	case hello_world:
-		err = helloworld();
+	case SYS_read:
+		err = sys_read(tf->tf_a0, (userptr_t) tf->tf_a1, tf->tf_a2, &retval);
 		break;
+	case SYS_write:
+		err = sys_write(tf->tf_a0, (userptr_t) tf->tf_a1, tf->tf_a2, &retval);
+		break;
+	case SYS_lseek:
+		//tf->tf_a2 stores high 32, tf->tf_a3 stores low 32.
+		// We left shift the high and then OR with the low
+		pos = (off_t) tf->tf_a2 >> 32 | tf->tf_a3;
+		//copy the value of whence which is in the stack frame into our variable
+		err = copyin((userptr_t) tf->tf_sp + 16, (userptr_t) whence,
+				sizeof(whence));
+		err = sys_lseek(tf->tf_a0, pos, whence, &retval64);
+		break;
+
 	default:
 		kprintf("Unknown syscall %d\n", callno);
 		err = ENOSYS;
@@ -129,6 +154,12 @@ void syscall(struct trapframe *tf) {
 		 */
 		tf->tf_v0 = err;
 		tf->tf_a3 = 1; /* signal an error */
+	} else if (err == 122) {/*only for lseek!! Bad hack :P*/
+		high32 = retval64 >> 32;
+		low32 = retval64 & 0xffffffff;
+		tf->tf_v0 = high32;
+		tf->tf_v1 = low32;
+		tf->tf_a3 = 0;
 	} else {
 		/* Success. */
 		tf->tf_v0 = retval;
