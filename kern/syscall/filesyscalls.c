@@ -16,15 +16,16 @@
 
 int sys_open(userptr_t filename, int flags, int *retval) {
 
-	int fd = 0;
+	int fd = 3;
 	int result;
 	char *kbuf;
-	size_t len;
+	//size_t len;
 
-	kbuf = kmalloc(sizeof(filename));
+	kbuf = kmalloc(PATH_MAX);
 
-	if ((result = copyin((const_userptr_t) filename, kbuf, len)) != 0) {
-		return ENODEV;
+	if ((result = copyinstr((const_userptr_t) filename, kbuf, PATH_MAX, NULL ))
+			!= 0) {
+		return result;
 	}
 
 //	if (flags != (O_RDONLY || O_WRONLY || O_RDWR)) {
@@ -80,11 +81,11 @@ int sys_close(int fd, int *retval) {
 int sys_read(int fd, void *buf, size_t buflen, int *retval) {
 
 	int amt_read;
-	struct iovec *iov;
-	struct uio *u;
+	struct iovec iov;
+	struct uio u;
+	int rwflags;
 
-	iov = kmalloc(sizeof(struct iovec));
-	u = kmalloc(sizeof(struct uio));
+	rwflags = curthread->t_fdtable[fd]->flag & 3;
 
 	if (fd > OPEN_MAX) {
 		return EBADF;
@@ -93,33 +94,30 @@ int sys_read(int fd, void *buf, size_t buflen, int *retval) {
 		return EBADF;
 	}
 
-	if ((curthread->t_fdtable[fd]->flag != O_RDONLY)
-			|| (curthread->t_fdtable[fd]->flag != O_RDWR)) {
+	if ((rwflags != O_RDONLY) || (rwflags != O_RDWR)) {
 		return EBADF;
 	}
 
 	lock_acquire(curthread->t_fdtable[fd]->filelock);
 
-	iov->iov_ubase = buf;
-	iov->iov_len = buflen;
+	iov.iov_ubase = buf;
+	iov.iov_len = buflen;
 
-	u->uio_iov = iov;
-	u->uio_iovcnt = 1;
-	u->uio_offset = curthread->t_fdtable[fd]->offset;
-	u->uio_resid = buflen;
-	u->uio_segflg = UIO_USERSPACE;
-	u->uio_rw = UIO_READ;
-	u->uio_space = curthread->t_addrspace;
+	u.uio_iov = &iov;
+	u.uio_iovcnt = 1;
+	u.uio_offset = curthread->t_fdtable[fd]->offset;
+	u.uio_resid = buflen;
+	u.uio_segflg = UIO_USERSPACE;
+	u.uio_rw = UIO_READ;
+	u.uio_space = curthread->t_addrspace;
 
-	VOP_READ(curthread->t_fdtable[fd]->vn, u);
+	VOP_READ(curthread->t_fdtable[fd]->vn, &u);
 
-	amt_read = buflen - u->uio_resid;
+	amt_read = buflen - u.uio_resid;
 	curthread->t_fdtable[fd]->offset = amt_read;
 
 	lock_release(curthread->t_fdtable[fd]->filelock);
 
-	kfree(iov);
-	kfree(u);
 	*retval = amt_read;
 	return 0;
 }
@@ -127,11 +125,15 @@ int sys_read(int fd, void *buf, size_t buflen, int *retval) {
 int sys_write(int fd, void *buf, size_t nbytes, int *retval) {
 
 	int amt_written;
-	struct iovec *iov;
-	struct uio *u;
+	struct iovec iov;
+	struct uio u;
+	int rwflags;
 
-	iov = kmalloc(sizeof(struct iovec));
-	u = kmalloc(sizeof(struct uio));
+	rwflags = curthread->t_fdtable[fd]->flag & 3;
+
+	if (curthread->t_fdtable[1] == 0) {
+		panic("no con");
+	}
 
 	if (fd > OPEN_MAX) {
 		return EBADF;
@@ -140,34 +142,31 @@ int sys_write(int fd, void *buf, size_t nbytes, int *retval) {
 		return EBADF;
 	}
 
-	if ((curthread->t_fdtable[fd]->flag != O_WRONLY)
-			|| (curthread->t_fdtable[fd]->flag != O_RDWR)) {
+	if ((rwflags != O_WRONLY) && (rwflags != O_RDWR)) {
 
 		return EBADF;
 	}
 
 	lock_acquire(curthread->t_fdtable[fd]->filelock);
 
-	iov->iov_ubase = buf;
-	iov->iov_len = nbytes;
+	iov.iov_ubase = buf;
+	iov.iov_len = nbytes;
 
-	u->uio_iov = iov;
-	u->uio_iovcnt = 1;
-	u->uio_offset = curthread->t_fdtable[fd]->offset;
-	u->uio_resid = nbytes;
-	u->uio_segflg = UIO_USERSPACE;
-	u->uio_rw = UIO_WRITE;
-	u->uio_space = curthread->t_addrspace;
+	u.uio_iov = &iov;
+	u.uio_iovcnt = 1;
+	u.uio_offset = curthread->t_fdtable[fd]->offset;
+	u.uio_resid = nbytes;
+	u.uio_segflg = UIO_USERSPACE;
+	u.uio_rw = UIO_WRITE;
+	u.uio_space = curthread->t_addrspace;
 
-	VOP_WRITE(curthread->t_fdtable[fd]->vn, u);
+	VOP_WRITE(curthread->t_fdtable[fd]->vn, &u);
 
-	amt_written = nbytes - u->uio_resid;
+	amt_written = nbytes - u.uio_resid;
 	curthread->t_fdtable[fd]->offset = amt_written;
 
 	lock_release(curthread->t_fdtable[fd]->filelock);
 
-	kfree(iov);
-	kfree(u);
 	*retval = amt_written;
 	return 0;
 }
@@ -187,8 +186,6 @@ off_t sys_lseek(int fd, off_t pos, int whence, off_t *retval64) {
 	if (whence != SEEK_CUR || whence != SEEK_SET || whence != SEEK_END) {
 		return EINVAL;
 	}
-
-	//eof = kmalloc(sizeof(struct stat));
 
 	lock_acquire(curthread->t_fdtable[fd]->filelock);
 

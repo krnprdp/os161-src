@@ -38,6 +38,8 @@ int
 main()
 {
 	/* Just exit with success. */
-	
+	while(1){
+
+	}
 	exit(0);
 }
