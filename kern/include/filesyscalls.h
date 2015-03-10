@@ -9,4 +9,4 @@ int sys_read(int fd, void *buf, size_t buflen, int *retval);
 //Definition for SYS_write
 int sys_write(int fd, void *buf, size_t nbytes, int *retval);
 //Definition for SYS_lseek
-off_t sys_lseek(int fd, off_t pos, int whence, off_t *retval64);
+off_t sys_lseek(int fd, off_t pos, userptr_t whenceptr, off_t *retval64);

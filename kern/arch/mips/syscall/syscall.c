@@ -35,7 +35,8 @@
 #include <thread.h>
 #include <current.h>
 #include <syscall.h>
-#include <copyinout.h> //added for copyin function
+#include <copyinout.h>
+#include <kern/limits.h>//added for copyin function
 /*
  * System call dispatcher.
  *
@@ -81,7 +82,7 @@ void syscall(struct trapframe *tf) {
 	int err;
 
 	/*Added for lseek*/
-	int whence;
+//	int whence;
 	int high32, low32;
 	off_t pos;
 	off_t retval64;
@@ -135,9 +136,11 @@ void syscall(struct trapframe *tf) {
 		// We left shift the high and then OR with the low
 		pos = (off_t) tf->tf_a2 >> 32 | tf->tf_a3;
 		//copy the value of whence which is in the stack frame into our variable
-		err = copyin((userptr_t) tf->tf_sp + 16, (userptr_t) whence,
-				sizeof(whence));
-		err = sys_lseek(tf->tf_a0, pos, whence, &retval64);
+
+		//err = copyout((userptr_t)tf->tf_sp + 16, (userptr_t)whence, sizeof(int));
+
+		//err = copyin((userptr_t) tf->tf_sp + 16, whence, sizeof(int));
+		err = sys_lseek(tf->tf_a0, pos, (userptr_t) tf->tf_sp + 16, &retval64);
 		break;
 
 	default:
@@ -146,7 +149,15 @@ void syscall(struct trapframe *tf) {
 		break;
 	}
 
-	if (err) {
+	if (err == -1) {/*only for lseek!! Bad hack :P*/
+		high32 = retval64 >> 32;
+		low32 = retval64 & 0xffffffff;
+		tf->tf_v0 = high32;
+		tf->tf_v1 = low32;
+		tf->tf_a3 = 0;
+	}
+
+	else if (err) {
 		/*
 		 * Return the error code. This gets converted at
 		 * userlevel to a return value of -1 and the error
@@ -154,12 +165,6 @@ void syscall(struct trapframe *tf) {
 		 */
 		tf->tf_v0 = err;
 		tf->tf_a3 = 1; /* signal an error */
-	} else if (err == 122) {/*only for lseek!! Bad hack :P*/
-		high32 = retval64 >> 32;
-		low32 = retval64 & 0xffffffff;
-		tf->tf_v0 = high32;
-		tf->tf_v1 = low32;
-		tf->tf_a3 = 0;
 	} else {
 		/* Success. */
 		tf->tf_v0 = retval;

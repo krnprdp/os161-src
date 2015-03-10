@@ -16,10 +16,9 @@
 
 int sys_open(userptr_t filename, int flags, int *retval) {
 
-	int fd = 3;
+	int fd = 0;
 	int result;
 	char *kbuf;
-	//size_t len;
 
 	kbuf = kmalloc(PATH_MAX);
 
@@ -94,7 +93,7 @@ int sys_read(int fd, void *buf, size_t buflen, int *retval) {
 		return EBADF;
 	}
 
-	if ((rwflags != O_RDONLY) || (rwflags != O_RDWR)) {
+	if ((rwflags != O_RDONLY) && (rwflags != O_RDWR)) {
 		return EBADF;
 	}
 
@@ -114,7 +113,7 @@ int sys_read(int fd, void *buf, size_t buflen, int *retval) {
 	VOP_READ(curthread->t_fdtable[fd]->vn, &u);
 
 	amt_read = buflen - u.uio_resid;
-	curthread->t_fdtable[fd]->offset = amt_read;
+	curthread->t_fdtable[fd]->offset += amt_read;
 
 	lock_release(curthread->t_fdtable[fd]->filelock);
 
@@ -163,15 +162,22 @@ int sys_write(int fd, void *buf, size_t nbytes, int *retval) {
 	VOP_WRITE(curthread->t_fdtable[fd]->vn, &u);
 
 	amt_written = nbytes - u.uio_resid;
-	curthread->t_fdtable[fd]->offset = amt_written;
+	curthread->t_fdtable[fd]->offset += amt_written;
 
 	lock_release(curthread->t_fdtable[fd]->filelock);
 
 	*retval = amt_written;
 	return 0;
 }
-off_t sys_lseek(int fd, off_t pos, int whence, off_t *retval64) {
+off_t sys_lseek(int fd, off_t pos, userptr_t whenceptr, off_t *retval64) {
 
+	int whence;
+
+	int result = copyin(whenceptr, &whence, sizeof(int));
+
+	if(result!=0){
+		panic("whence");
+	}
 	struct stat eof;
 
 	if (pos < 0) {
@@ -183,7 +189,7 @@ off_t sys_lseek(int fd, off_t pos, int whence, off_t *retval64) {
 	if (curthread->t_fdtable[fd] == 0) {
 		return EBADF;
 	}
-	if (whence != SEEK_CUR || whence != SEEK_SET || whence != SEEK_END) {
+	if (whence != SEEK_CUR && whence != SEEK_SET && whence != SEEK_END) {
 		return EINVAL;
 	}
 
@@ -206,5 +212,5 @@ off_t sys_lseek(int fd, off_t pos, int whence, off_t *retval64) {
 	*retval64 = curthread->t_fdtable[fd]->offset;
 
 	lock_release(curthread->t_fdtable[fd]->filelock);
-	return 122; //for lseek custom value
+	return -1; //for lseek custom value
 }
