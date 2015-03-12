@@ -39,6 +39,7 @@
 #include <spinlock.h>
 #include <threadlist.h>
 #include <limits.h>
+#include <kern/types.h>
 struct addrspace;
 struct cpu;
 struct vnode;
@@ -122,10 +123,8 @@ struct thread {
 	/* add more here as needed */
 	struct fdesc* t_fdtable[OPEN_MAX];
 	//newly added
+
 	pid_t t_pid;
-	pid_t t_parentPid;
-
-
 };
 
 struct fdesc {
@@ -137,11 +136,10 @@ struct fdesc {
 	struct lock *filelock;
 };
 
-
-struct process{
+struct process {
 	pid_t pid;
-	struct thread *th;
 	int exitcode;
+	struct thread *t;
 	struct semaphore *sem;
 };
 

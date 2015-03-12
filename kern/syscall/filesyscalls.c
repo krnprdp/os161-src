@@ -171,7 +171,7 @@ off_t sys_lseek(int fd, off_t pos, userptr_t whenceptr, off_t *retval64) {
 
 	int result = copyin(whenceptr, &whence, sizeof(int));
 
-	if(result!=0){
+	if (result != 0) {
 		panic("whence");
 	}
 	struct stat eof;
@@ -209,4 +209,68 @@ off_t sys_lseek(int fd, off_t pos, userptr_t whenceptr, off_t *retval64) {
 
 	lock_release(curthread->t_fdtable[fd]->filelock);
 	return -11; //for lseek custom value
+}
+
+int sys_dup2(int oldfd, int newfd, int *retval) {
+
+	if (curthread->t_fdtable[oldfd] == 0) {
+		return EBADF;
+	}
+
+	if (curthread->t_fdtable[newfd]->ref_count >= 1) {
+		if (sys_close(newfd, retval)) {
+			return -1;
+		}
+	}
+
+	struct fdesc *temp;
+
+	if (copyout(curthread->t_fdtable[oldfd], (userptr_t) temp,
+			sizeof(struct fdesc))) {
+		return -1;
+	}
+
+	curthread->t_fdtable[oldfd]->ref_count += 1;
+
+	if (copyin((userptr_t) temp, curthread->t_fdtable[newfd],
+			sizeof(struct fdesc))) {
+		return -1;
+	}
+
+	curthread->t_fdtable[newfd]->ref_count += 1;
+
+	*retval = newfd;
+	return 0;
+}
+
+int sys_chdir(userptr_t pathname, int *retval) {
+
+	if (vfs_chdir((char*) pathname)) {
+		return -1;
+	}
+
+	*retval = 0;
+	return 0;
+}
+
+int sys_getcwd(userptr_t buf, size_t buflen, int *retval) {
+
+	struct uio *u;
+	struct iovec iov;
+
+	iov.iov_ubase = buf;
+	iov.iov_len = buflen;
+
+	u->uio_iov = &iov;
+	u->uio_iovcnt = 1;
+	u->uio_segflg = UIO_USERSPACE;
+	u->uio_rw = UIO_READ;
+	u->uio_space = curthread->t_addrspace;
+
+	if (vfs_getcwd(u)) {
+		return EINVAL;
+	}
+
+	*retval = buflen;
+	return 0;
 }
