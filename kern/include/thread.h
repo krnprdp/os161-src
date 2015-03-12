@@ -121,6 +121,11 @@ struct thread {
 
 	/* add more here as needed */
 	struct fdesc* t_fdtable[OPEN_MAX];
+	//newly added
+	pid_t t_pid;
+	pid_t t_parentPid;
+
+
 };
 
 struct fdesc {
@@ -130,6 +135,14 @@ struct fdesc {
 	int ref_count;
 	struct vnode *vn;
 	struct lock *filelock;
+};
+
+
+struct process{
+	pid_t pid;
+	struct thread *th;
+	int exitcode;
+	struct semaphore *sem;
 };
 
 /* Call once during system startup to allocate data structures. */
