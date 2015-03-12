@@ -82,7 +82,6 @@ void syscall(struct trapframe *tf) {
 	int err;
 
 	/*Added for lseek*/
-//	int whence;
 	int high32, low32;
 	off_t pos;
 	off_t retval64;
@@ -104,7 +103,7 @@ void syscall(struct trapframe *tf) {
 	 */
 
 	retval = 0;
-	retval64 = 0;
+	retval64 = 0; /*Added for lseek*/
 
 	switch (callno) {
 	case SYS_reboot:
@@ -116,30 +115,33 @@ void syscall(struct trapframe *tf) {
 		break;
 
 		/* Add stuff here */
+
+		/*Could not get hello world to work. Write a new test Program?*/
 	case hello_world:
 		err = helloworld();
 		break;
+
 	case SYS_open:
 		err = sys_open((userptr_t) tf->tf_a0, tf->tf_a1, &retval);
 		break;
+
 	case SYS_close:
 		err = sys_close(tf->tf_a0, &retval);
 		break;
+
 	case SYS_read:
 		err = sys_read(tf->tf_a0, (userptr_t) tf->tf_a1, tf->tf_a2, &retval);
 		break;
+
 	case SYS_write:
 		err = sys_write(tf->tf_a0, (userptr_t) tf->tf_a1, tf->tf_a2, &retval);
 		break;
+
 	case SYS_lseek:
 		//tf->tf_a2 stores high 32, tf->tf_a3 stores low 32.
 		// We left shift the high and then OR with the low
 		pos = (off_t) tf->tf_a2 >> 32 | tf->tf_a3;
 		//copy the value of whence which is in the stack frame into our variable
-
-		//err = copyout((userptr_t)tf->tf_sp + 16, (userptr_t)whence, sizeof(int));
-
-		//err = copyin((userptr_t) tf->tf_sp + 16, whence, sizeof(int));
 		err = sys_lseek(tf->tf_a0, pos, (userptr_t) tf->tf_sp + 16, &retval64);
 		break;
 
@@ -149,7 +151,7 @@ void syscall(struct trapframe *tf) {
 		break;
 	}
 
-	if (err == -1) {/*only for lseek!! Bad hack :P*/
+	if (err == -11) {/*only for lseek!! Bad hack :P*/
 		high32 = retval64 >> 32;
 		low32 = retval64 & 0xffffffff;
 		tf->tf_v0 = high32;

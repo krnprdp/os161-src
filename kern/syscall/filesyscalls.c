@@ -27,10 +27,6 @@ int sys_open(userptr_t filename, int flags, int *retval) {
 		return result;
 	}
 
-//	if (flags != (O_RDONLY || O_WRONLY || O_RDWR)) {
-//		return result;
-//	}
-
 	while (curthread->t_fdtable[fd] != 0) {
 		fd++;
 	}
@@ -212,5 +208,5 @@ off_t sys_lseek(int fd, off_t pos, userptr_t whenceptr, off_t *retval64) {
 	*retval64 = curthread->t_fdtable[fd]->offset;
 
 	lock_release(curthread->t_fdtable[fd]->filelock);
-	return -1; //for lseek custom value
+	return -11; //for lseek custom value
 }
