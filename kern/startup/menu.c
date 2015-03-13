@@ -123,6 +123,7 @@ int common_prog(int nargs, char **args) {
 
 	struct thread *curthread;
 	curthread = kmalloc(sizeof(struct thread*));
+
 #if OPT_SYNCHPROBS
 	kprintf("Warning: this probably won't work with a "
 			"synchronization-problems kernel.\n");
@@ -135,6 +136,7 @@ int common_prog(int nargs, char **args) {
 		kprintf("thread_fork failed: %s\n", strerror(result));
 		return result;
 	}
+	//call wait pid code - need to change
 	P(curthread->t_sem);
 
 	return 0;

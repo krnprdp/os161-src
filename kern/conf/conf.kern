@@ -369,6 +369,7 @@ file      syscall/runprogram.c
 file      syscall/time_syscalls.c
 file	  syscall/helloworld.c
 file 	  syscall/filesyscalls.c
+file 	  syscall/processsyscalls.c
 
 #
 # Startup and initialization

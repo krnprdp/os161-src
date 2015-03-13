@@ -126,6 +126,7 @@ struct thread {
 
 	pid_t t_pid;
 	struct semaphore* t_sem;
+	int status;
 
 };
 

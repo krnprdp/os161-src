@@ -32,6 +32,7 @@
 
 #include <helloworld.h>
 #include <filesyscalls.h>
+#include <processsyscalls.h>
 
 struct trapframe; /* from <machine/trapframe.h> */
 
