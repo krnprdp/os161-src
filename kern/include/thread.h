@@ -43,6 +43,7 @@
 struct addrspace;
 struct cpu;
 struct vnode;
+struct process *ptable[256];
 
 /* get machine-dependent defs */
 #include <machine/thread.h>
@@ -140,8 +141,10 @@ struct fdesc {
 };
 
 struct process {
+	pid_t ppid;
 	pid_t pid;
 	int exitcode;
+	bool exited;
 	struct thread *t;
 	struct semaphore *sem;
 };
