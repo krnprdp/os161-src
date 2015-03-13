@@ -216,7 +216,17 @@ int sys_write(int fd, void *buf, size_t nbytes, int *retval) {
 off_t sys_lseek(int fd, off_t pos, userptr_t whenceptr, off_t *retval64) {
 
 	int whence;
+	if (fd < 0) {
+		return EBADF;
+	}
 
+	if (fd > OPEN_MAX) {
+		return EBADF;
+	}
+
+	if (curthread->t_fdtable[fd] == 0) {
+		return EBADF;
+	}
 	int result = copyin(whenceptr, &whence, sizeof(int));
 
 	if (result != 0) {
@@ -256,6 +266,11 @@ off_t sys_lseek(int fd, off_t pos, userptr_t whenceptr, off_t *retval64) {
 	*retval64 = curthread->t_fdtable[fd]->offset;
 
 	lock_release(curthread->t_fdtable[fd]->filelock);
+
+	if (*retval64 < 0) {
+		return EINVAL;
+	}
+
 	return -11; //for lseek custom value
 }
 

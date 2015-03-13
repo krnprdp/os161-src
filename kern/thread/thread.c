@@ -149,6 +149,8 @@ thread_create(const char *name) {
 	for (int i = 0; i < OPEN_MAX; i++)
 		thread->t_fdtable[i] = 0;
 
+	thread->t_sem = sem_create("thread sem", 0);
+
 	return thread;
 }
 
@@ -252,7 +254,7 @@ void thread_destroy(struct thread *thread) {
 
 	/* sheer paranoia */
 	thread->t_wchan_name = "DESTROYED";
-
+	sem_destroy(thread->t_sem);
 	kfree(thread->t_name);
 	kfree(thread);
 }
@@ -782,6 +784,7 @@ void thread_exit(void) {
 
 	/* Interrupts off on this processor */
 	splhigh();
+	V(cur->t_sem);
 	thread_switch(S_ZOMBIE, NULL );
 	panic("The zombie walks!\n");
 }
@@ -807,9 +810,7 @@ void schedule(void) {
 	// 28 Feb 2012 : GWA : Leave the default scheduler alone!
 }
 #else
-void
-schedule(void)
-{
+void schedule(void) {
 	// 28 Feb 2012 : GWA : Implement your scheduler that prioritizes
 	// "interactive" threads here.
 }

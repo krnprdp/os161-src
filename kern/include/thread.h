@@ -125,6 +125,8 @@ struct thread {
 	//newly added
 
 	pid_t t_pid;
+	struct semaphore* t_sem;
+
 };
 
 struct fdesc {
