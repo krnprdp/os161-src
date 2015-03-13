@@ -153,7 +153,13 @@ int sys_write(int fd, void *buf, size_t nbytes, int *retval) {
 	struct iovec iov;
 	struct uio u;
 	int rwflags;
+	int result;
+	void *tbuf;
+	tbuf = kmalloc(PATH_MAX);
 
+	if ((result = copyinstr(buf, tbuf, PATH_MAX, NULL ))) {
+		return result;
+	}
 	if (fd < 0) {
 		return EBADF;
 	}
@@ -202,7 +208,7 @@ int sys_write(int fd, void *buf, size_t nbytes, int *retval) {
 	curthread->t_fdtable[fd]->offset += amt_written;
 
 	lock_release(curthread->t_fdtable[fd]->filelock);
-
+	kfree(tbuf);
 	*retval = amt_written;
 	return 0;
 }
