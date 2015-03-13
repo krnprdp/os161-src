@@ -33,8 +33,8 @@ int sys_open(userptr_t filename, int flags, int *retval) {
 
 	curthread->t_fdtable[fd] = (struct fdesc*) kmalloc(sizeof(struct fdesc));
 
-	if (vfs_open(kbuf, flags, 0664, &(curthread->t_fdtable[fd]->vn))) {
-		panic("EINVAL");
+	if ((result = vfs_open(kbuf, flags, 0664, &(curthread->t_fdtable[fd]->vn)))) {
+		return result;
 	}
 
 	curthread->t_fdtable[fd]->name = kbuf;
@@ -49,6 +49,10 @@ int sys_open(userptr_t filename, int flags, int *retval) {
 }
 
 int sys_close(int fd, int *retval) {
+
+	if (fd < 0) {
+		return EBADF;
+	}
 
 	if (fd > OPEN_MAX) {
 		return EBADF;
@@ -79,15 +83,41 @@ int sys_read(int fd, void *buf, size_t buflen, int *retval) {
 	struct iovec iov;
 	struct uio u;
 	int rwflags;
+	int result;
+	void *temp;
 
-	rwflags = curthread->t_fdtable[fd]->flag & 3;
+	temp = kmalloc(PATH_MAX);
 
+	if ((result = copyinstr(buf, temp, PATH_MAX, NULL ))) {
+		return result;
+	}
+	if (fd < 0) {
+		return EBADF;
+	}
 	if (fd > OPEN_MAX) {
 		return EBADF;
+	}
+
+	if (buf == NULL ) {
+		return EFAULT;
 	}
 	if (curthread->t_fdtable[fd] == 0) {
 		return EBADF;
 	}
+
+	if (fd > OPEN_MAX) {
+		return EBADF;
+	}
+	result = curthread->t_fdtable[fd]->ref_count;
+	if ((result = copyinstr(buf, temp, PATH_MAX, NULL ))) {
+		return result;
+	}
+
+	if (curthread->t_fdtable[fd] == 0) {
+		return EBADF;
+	}
+
+	rwflags = curthread->t_fdtable[fd]->flag & 3;
 
 	if ((rwflags != O_RDONLY) && (rwflags != O_RDWR)) {
 		return EBADF;
@@ -112,7 +142,7 @@ int sys_read(int fd, void *buf, size_t buflen, int *retval) {
 	curthread->t_fdtable[fd]->offset += amt_read;
 
 	lock_release(curthread->t_fdtable[fd]->filelock);
-
+	kfree(temp);
 	*retval = amt_read;
 	return 0;
 }
@@ -124,6 +154,17 @@ int sys_write(int fd, void *buf, size_t nbytes, int *retval) {
 	struct uio u;
 	int rwflags;
 
+	if (fd < 0) {
+		return EBADF;
+	}
+
+	if (fd > OPEN_MAX) {
+		return EBADF;
+	}
+
+	if (curthread->t_fdtable[fd] == 0) {
+		return EBADF;
+	}
 	rwflags = curthread->t_fdtable[fd]->flag & 3;
 
 	if (curthread->t_fdtable[1] == 0) {
@@ -165,6 +206,7 @@ int sys_write(int fd, void *buf, size_t nbytes, int *retval) {
 	*retval = amt_written;
 	return 0;
 }
+
 off_t sys_lseek(int fd, off_t pos, userptr_t whenceptr, off_t *retval64) {
 
 	int whence;
