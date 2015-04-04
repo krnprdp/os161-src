@@ -151,6 +151,19 @@ thread_create(const char *name) {
 
 	thread->t_sem = sem_create("thread sem", 0);
 
+	int i = 1;
+	for (i = 1; i < 256; i++) {
+		if (ptable[i] == 0) {
+			break;
+		}
+
+	}
+	ptable[i] = (struct process*) kmalloc(sizeof(struct process));
+	thread->t_pid = i;
+	ptable[i]->pid = i;
+
+	ptable[i]->t = thread;
+
 	return thread;
 }
 
@@ -364,6 +377,11 @@ void thread_bootstrap(void) {
 	 */
 	curthread->t_cpu = curcpu;
 	curcpu->c_curthread = curthread;
+
+	int i = 1;
+	for (i = 1; i < 256; i++) {
+		ptable[i] = 0;
+	}
 
 	/* Done */
 }

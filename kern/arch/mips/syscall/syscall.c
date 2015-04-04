@@ -157,10 +157,15 @@ void syscall(struct trapframe *tf) {
 		err = sys_getcwd((userptr_t) tf->tf_a0, tf->tf_a1, &retval);
 		break;
 
+	case SYS_fork:
+		err = sys_fork(tf, &retval);
+		break;
 	case SYS__exit:
 		sys_exit(tf->tf_a0);
 		break;
-
+	case SYS_getpid:
+		sys_getpid(&retval);
+		break;
 	default:
 		kprintf("Unknown syscall %d\n", callno);
 		err = ENOSYS;
