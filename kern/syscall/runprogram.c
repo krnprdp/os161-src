@@ -45,6 +45,7 @@
 #include <syscall.h>
 #include <test.h>
 #include <synch.h>
+#include <copyinout.h>
 
 /*
  * Load program "progname" and start running it in usermode.
@@ -52,7 +53,7 @@
  *
  * Calls vfs_open on progname and thus may destroy it.
  */
-int runprogram(char *progname) {
+int runprogram(char *progname, char **args, unsigned long nargs) {
 	struct vnode *v;
 	vaddr_t entrypoint, stackptr;
 	int result;
@@ -145,9 +146,43 @@ int runprogram(char *progname) {
 		return result;
 	}
 
+	int argc = (signed) nargs;
+	int err;
+	char** argv;
+
+	//kmalloc argv with size of char* times nargs+1
+	argv = kmalloc((nargs + 1) * sizeof(userptr_t));
+
+	size_t len;
+
+	for (int i = 0; i < argc; i++) {
+
+		len = strlen(args[i]) + 1;
+
+		len = (len + 4 - 1) & ~(size_t) (4 - 1);
+
+		stackptr -= len;
+
+		if ((err = copyout(args[i], (userptr_t) stackptr, len)) != 0) {
+
+			kprintf("error copyout");
+		}
+
+		argv[i] = (char*) stackptr;
+
+	}
+
+	argv[nargs] = NULL;
+
+	stackptr -= (nargs + 1) * sizeof(userptr_t);
+
+	if ((err = copyout(argv, (userptr_t) stackptr, (nargs + 1) * sizeof(char*)))) {
+		kprintf("error copying");
+	}
+
 	/* Warp to user mode. */
-	enter_new_process(0 /*argc*/, NULL /*userspace addr of argv*/, stackptr,
-			entrypoint);
+	enter_new_process(argc, (userptr_t) stackptr /*userspace addr of argv*/,
+			stackptr, entrypoint);
 
 	/* enter_new_process does not return. */
 	panic("enter_new_process returned\n");

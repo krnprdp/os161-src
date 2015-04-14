@@ -146,14 +146,15 @@ thread_create(const char *name) {
 	thread->t_cwd = NULL;
 
 	/* If you add to struct thread, be sure to initialize here */
-	for (int i = 0; i < OPEN_MAX; i++)
+	for (int i = 0; i < OPEN_MAX; i++){
 		thread->t_fdtable[i] = 0;
-
+		//thread->t_fdtable[i]->ref_count = 0;
+	}
 	thread->t_sem = sem_create("thread sem", 0);
 
 	int i = 1;
 	for (i = 1; i < 256; i++) {
-		if (ptable[i] == 0) {
+		if (ptable[i] == NULL) {
 			break;
 		}
 
@@ -161,7 +162,7 @@ thread_create(const char *name) {
 	ptable[i] = (struct process*) kmalloc(sizeof(struct process));
 	thread->t_pid = i;
 	ptable[i]->pid = i;
-
+	ptable[i]->ppid = -1;
 	ptable[i]->t = thread;
 
 	return thread;
@@ -377,11 +378,6 @@ void thread_bootstrap(void) {
 	 */
 	curthread->t_cpu = curcpu;
 	curcpu->c_curthread = curthread;
-
-	int i = 1;
-	for (i = 1; i < 256; i++) {
-		ptable[i] = 0;
-	}
 
 	/* Done */
 }

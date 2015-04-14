@@ -39,7 +39,11 @@ int sys_open(userptr_t filename, int flags, int *retval) {
 
 	curthread->t_fdtable[fd]->name = kbuf;
 	curthread->t_fdtable[fd]->flag = flags;
-	curthread->t_fdtable[fd]->ref_count = 1;
+
+	if (curthread->t_fdtable[fd]->ref_count == 1)
+		curthread->t_fdtable[fd]->ref_count++;
+	else
+		curthread->t_fdtable[fd]->ref_count = 1;
 	curthread->t_fdtable[fd]->offset = 0;
 	curthread->t_fdtable[fd]->filelock = lock_create(kbuf);
 
@@ -94,7 +98,7 @@ int sys_read(int fd, void *buf, size_t buflen, int *retval) {
 	if (fd < 0) {
 		return EBADF;
 	}
-	if (fd > OPEN_MAX) {
+	if (fd >= OPEN_MAX) {
 		return EBADF;
 	}
 
@@ -105,9 +109,6 @@ int sys_read(int fd, void *buf, size_t buflen, int *retval) {
 		return EBADF;
 	}
 
-	if (fd > OPEN_MAX) {
-		return EBADF;
-	}
 	result = curthread->t_fdtable[fd]->ref_count;
 	if ((result = copyinstr(buf, temp, PATH_MAX, NULL ))) {
 		return result;
@@ -164,7 +165,7 @@ int sys_write(int fd, void *buf, size_t nbytes, int *retval) {
 		return EBADF;
 	}
 
-	if (fd > OPEN_MAX) {
+	if (fd >= OPEN_MAX) {
 		return EBADF;
 	}
 
@@ -220,7 +221,7 @@ off_t sys_lseek(int fd, off_t pos, userptr_t whenceptr, off_t *retval64) {
 		return EBADF;
 	}
 
-	if (fd > OPEN_MAX) {
+	if (fd >= OPEN_MAX) {
 		return EBADF;
 	}
 
@@ -237,7 +238,7 @@ off_t sys_lseek(int fd, off_t pos, userptr_t whenceptr, off_t *retval64) {
 	if (pos < 0) {
 		return EINVAL;
 	}
-	if (fd > OPEN_MAX) {
+	if (fd >= OPEN_MAX) {
 		return EBADF;
 	}
 	if (curthread->t_fdtable[fd] == 0) {
@@ -276,16 +277,35 @@ off_t sys_lseek(int fd, off_t pos, userptr_t whenceptr, off_t *retval64) {
 
 int sys_dup2(int oldfd, int newfd, int *retval) {
 
-	if (curthread->t_fdtable[oldfd] == 0) {
+//	if (curthread->t_fdtable[oldfd] == 0) {
+//		return EBADF;
+//	}
+
+	if (oldfd < 0) {
 		return EBADF;
 	}
 
-	if (curthread->t_fdtable[newfd]->ref_count >= 1) {
-		if (sys_close(newfd, retval)) {
-			return -1;
-		}
+	if (oldfd >= OPEN_MAX) {
+		return EBADF;
+	}
+	if (curthread->t_fdtable[oldfd] == 0) {
+		return EBADF;
+	}
+	if (newfd < 0) {
+		return EBADF;
 	}
 
+	if (newfd >= OPEN_MAX) {
+		return EBADF;
+	}
+	if (curthread->t_fdtable[newfd] == 0) {
+		return EBADF;
+	}
+//	if (curthread->t_fdtable[oldfd]->ref_count == 0) {
+//		if (sys_close(newfd, retval)) {
+//			return -1;
+//		}
+//	}
 	struct fdesc *temp;
 
 	if (copyout(curthread->t_fdtable[oldfd], (userptr_t) temp,
