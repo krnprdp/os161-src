@@ -43,8 +43,6 @@
 struct addrspace;
 struct cpu;
 struct vnode;
-struct process *ptable[256];
-
 
 
 /* get machine-dependent defs */

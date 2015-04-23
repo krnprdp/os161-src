@@ -65,7 +65,7 @@ struct wchan {
 DECLARRAY(cpu);
 DEFARRAY(cpu, /*no inline*/);
 static struct cpuarray allcpus;
-
+struct process *ptable[256];
 /* Used to wait for secondary CPUs to come online. */
 static struct semaphore *cpu_startup_sem;
 
@@ -146,25 +146,27 @@ thread_create(const char *name) {
 	thread->t_cwd = NULL;
 
 	/* If you add to struct thread, be sure to initialize here */
-	for (int i = 0; i < OPEN_MAX; i++){
+	for (int i = 0; i < OPEN_MAX; i++) {
 		thread->t_fdtable[i] = 0;
 		//thread->t_fdtable[i]->ref_count = 0;
 	}
-	thread->t_sem = sem_create("thread sem", 0);
 
+	// pid allocation
 	int i = 1;
-	for (i = 1; i < 256; i++) {
-		if (ptable[i] == NULL) {
-			break;
-		}
 
+	while (ptable[i] != NULL ) {
+		i++;
 	}
+
+	if (i == 256) {
+		panic("No. of processes greater than 256");
+	}
+
 	ptable[i] = (struct process*) kmalloc(sizeof(struct process));
 	thread->t_pid = i;
 	ptable[i]->pid = i;
-	ptable[i]->ppid = -1;
+	//ptable[i]->ppid = -1;
 	ptable[i]->t = thread;
-
 	return thread;
 }
 
@@ -379,6 +381,9 @@ void thread_bootstrap(void) {
 	curthread->t_cpu = curcpu;
 	curcpu->c_curthread = curthread;
 
+	for (int i = 0; i < 256; i++)
+		ptable[i] = NULL;
+
 	/* Done */
 }
 
@@ -510,6 +515,11 @@ int thread_fork(const char *name,
 
 	/* Set up the switchframe so entrypoint() gets called */
 	switchframe_init(newthread, entrypoint, data1, data2);
+
+	//Copy parent’s file table into child
+	for (int i = 0; i < OPEN_MAX; i++) {
+		newthread->t_fdtable[i] = curthread->t_fdtable[i];
+	}
 
 	/* Lock the current cpu's run queue and make the new thread runnable */
 	thread_make_runnable(newthread, false);

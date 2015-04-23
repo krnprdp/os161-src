@@ -52,9 +52,7 @@ static volatile int mypid;
  * Helper function for fork that prints a warning on error.
  */
 static
-int
-dofork(void)
-{
+int dofork(void) {
 	int pid;
 	pid = fork();
 	if (pid < 0) {
@@ -69,23 +67,20 @@ dofork(void)
  * sure it's correct every time.
  */
 static
-void
-check(void)
-{
-	int i;
+void check(void) {
+//	int i;
 
 	mypid = getpid();
-	
+	//printf("pid:%d",mypid);
 	/* Make sure each fork has its own address space. */
-	for (i=0; i<800; i++) {
-		volatile int seenpid;
-		seenpid = mypid;
-		if (seenpid != getpid()) {
-			errx(1, "pid mismatch (%d, should be %d) "
-			     "- your vm is broken!", 
-			     seenpid, getpid());
-		}
-	}
+//	for (i = 0; i < 800; i++) {
+//		volatile int seenpid;
+//		seenpid = mypid;
+//		if (seenpid != getpid()) {
+//			errx(1, "pid mismatch (%d, should be %d) "
+//					"- your vm is broken!", seenpid, getpid());
+//		}
+//	}
 }
 
 /*
@@ -98,28 +93,24 @@ check(void)
  * the parent of all the processes returns from the chain of dowaits.
  */
 static
-void
-dowait(int nowait, int pid)
-{
+void dowait(int nowait, int pid) {
 	int x;
 
-	if (pid<0) {
+	if (pid < 0) {
 		/* fork in question failed; just return */
 		return;
 	}
-	if (pid==0) {
+	if (pid == 0) {
 		/* in the fork in question we were the child; exit */
 		exit(0);
 	}
 
 	if (!nowait) {
-		if (waitpid(pid, &x, 0)<0) {
+		if (waitpid(pid, &x, 0) < 0) {
 			warn("waitpid");
-		}
-		else if (WIFSIGNALED(x)) {
+		} else if (WIFSIGNALED(x)) {
 			warnx("pid %d: signal %d", pid, WTERMSIG(x));
-		}
-		else if (WEXITSTATUS(x) != 0) {
+		} else if (WEXITSTATUS(x) != 0) {
 			warnx("pid %d: exit %d", pid, WEXITSTATUS(x));
 		}
 	}
@@ -129,9 +120,7 @@ dowait(int nowait, int pid)
  * Actually run the test.
  */
 static
-void
-test(int nowait)
-{
+void test(int nowait) {
 	int pid0, pid1, pid2, pid3;
 
 	/*
@@ -142,12 +131,15 @@ test(int nowait)
 	 */
 
 	pid0 = dofork();
+	//printf("After 1 fork pid is %d\n",pid0);
 	putchar('0');
 	check();
 	pid1 = dofork();
+//	printf("After 2nd fork pid is %d\n",pid1);
 	putchar('1');
 	check();
 	pid2 = dofork();
+//	printf("After 3rd fork pid is %d\n",pid2);
 	putchar('2');
 	check();
 	pid3 = dofork();
@@ -166,15 +158,12 @@ test(int nowait)
 	putchar('\n');
 }
 
-int
-main(int argc, char *argv[])
-{
-	int nowait=0;
+int main(int argc, char *argv[]) {
+	int nowait = 0;
 
-	if (argc==2 && !strcmp(argv[1], "-w")) {
-		nowait=1;
-	}
-	else if (argc!=1 && argc!=0) {
+	if (argc == 2 && !strcmp(argv[1], "-w")) {
+		nowait = 1;
+	} else if (argc != 1 && argc != 0) {
 		warnx("usage: forktest [-w]");
 		return 1;
 	}

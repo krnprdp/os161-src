@@ -29,17 +29,21 @@
 
 #include <unistd.h>
 #include <stdlib.h>
-
+#include<stdio.h>
 /*
  * true - succeed.
  */
 
-int
-main()
-{
+int main() {
 	/* Just exit with success. */
-	while(1){
+//	while(1){
+//
+//	}
+//	exit(0);
+	int pid;
 
-	}
-	exit(0);
+	pid = fork();
+
+	printf("%d\n", pid);
+
 }

@@ -31,8 +31,8 @@
 #define _SYSCALL_H_
 
 #include <helloworld.h>
-#include <filesyscalls.h>
-#include <processsyscalls.h>
+#include <file_syscalls.h>
+#include <process_syscalls.h>
 
 struct trapframe; /* from <machine/trapframe.h> */
 
