@@ -146,6 +146,9 @@ thread_create(const char *name) {
 	thread->t_cwd = NULL;
 
 	/* If you add to struct thread, be sure to initialize here */
+
+	thread->t_sem = sem_create("sem",0);
+
 	for (int i = 0; i < OPEN_MAX; i++) {
 		thread->t_fdtable[i] = 0;
 		//thread->t_fdtable[i]->ref_count = 0;
@@ -808,7 +811,7 @@ void thread_exit(void) {
 
 	/* Interrupts off on this processor */
 	splhigh();
-	V(cur->t_sem);
+	//V(cur->t_sem);
 	thread_switch(S_ZOMBIE, NULL );
 	panic("The zombie walks!\n");
 }

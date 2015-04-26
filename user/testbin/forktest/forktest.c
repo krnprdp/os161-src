@@ -68,19 +68,19 @@ int dofork(void) {
  */
 static
 void check(void) {
-//	int i;
+	int i;
 
 	mypid = getpid();
 	//printf("pid:%d",mypid);
 	/* Make sure each fork has its own address space. */
-//	for (i = 0; i < 800; i++) {
-//		volatile int seenpid;
-//		seenpid = mypid;
-//		if (seenpid != getpid()) {
-//			errx(1, "pid mismatch (%d, should be %d) "
-//					"- your vm is broken!", seenpid, getpid());
-//		}
-//	}
+	for (i = 0; i < 800; i++) {
+		volatile int seenpid;
+		seenpid = mypid;
+		if (seenpid != getpid()) {
+			errx(1, "pid mismatch (%d, should be %d) "
+					"- your vm is broken!", seenpid, getpid());
+		}
+	}
 }
 
 /*
@@ -135,11 +135,11 @@ void test(int nowait) {
 	putchar('0');
 	check();
 	pid1 = dofork();
-//	printf("After 2nd fork pid is %d\n",pid1);
+	//printf("After 2nd fork pid is %d\n",pid1);
 	putchar('1');
 	check();
 	pid2 = dofork();
-//	printf("After 3rd fork pid is %d\n",pid2);
+	//printf("After 3rd fork pid is %d\n",pid2);
 	putchar('2');
 	check();
 	pid3 = dofork();

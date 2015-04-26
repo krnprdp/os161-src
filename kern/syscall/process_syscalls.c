@@ -33,15 +33,13 @@ int sys_fork(struct trapframe* tf, pid_t *retval) {
 	// Copy parent’s address space
 	//child_addr = kmalloc(sizeof(struct addrspace));
 	result = as_copy(curthread->t_addrspace, &child_addr);
-	curthread->t_sem = sem_create("sem", 0);
 
-	P(curthread->t_sem);
 
 	//Create child thread (using thread_fork)
 	result = thread_fork("child", child_forkentry,
 			(struct trapframe *) child_tf, (unsigned long) child_addr, &child);
 
-	//Parent returns with child’s pid immediately
+	//Parent returns with child’s pid
 	*retval = child->t_pid;
 
 	return 0;
@@ -63,13 +61,11 @@ void child_forkentry(void *data1, unsigned long data2) {
 	tf.tf_a3 = 0;
 	tf.tf_epc += 4;
 	//kprintf("getting here??");
-	V(curthread->t_sem);
 	mips_usermode(&tf);
 
 }
 
 int sys_getpid(pid_t *retval) {
-
 	*retval = curthread->t_pid;
 	return 0;
 }

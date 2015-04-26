@@ -135,7 +135,8 @@ int common_prog(int nargs, char **args) {
 		return result;
 	}
 	//call wait pid code - need to change
-	//P(curthread->t_sem);
+//	curthread->t_sem = sem_create("curthread",0);
+	P(curthread->t_sem);
 
 	return 0;
 }
