@@ -21,19 +21,19 @@ void sys_exit(int _exitcode) {
 
 int sys_fork(struct trapframe* tf, pid_t *retval) {
 
+
 	int result;
 	struct trapframe *child_tf;
 	struct addrspace* child_addr;
 	struct thread* child;
 
 	//Copy parent’s trap frame, and pass it to child thread
-	child_tf = kmalloc(sizeof(struct trapframe*));
+	child_tf = kmalloc(sizeof(struct trapframe));
 	*child_tf = *tf;
 
 	// Copy parent’s address space
-	//child_addr = kmalloc(sizeof(struct addrspace));
+	child_addr = kmalloc(sizeof(struct addrspace));
 	result = as_copy(curthread->t_addrspace, &child_addr);
-
 
 	//Create child thread (using thread_fork)
 	result = thread_fork("child", child_forkentry,
@@ -41,7 +41,6 @@ int sys_fork(struct trapframe* tf, pid_t *retval) {
 
 	//Parent returns with child’s pid
 	*retval = child->t_pid;
-
 	return 0;
 
 }
@@ -51,7 +50,8 @@ void child_forkentry(void *data1, unsigned long data2) {
 	struct trapframe tf;
 	//kprintf("getting here?");
 	//Load address space into child thread and activate it
-	curthread->t_addrspace = (struct addrspace*) data2;
+	//curthread->t_addrspace = (struct addrspace*) data2;
+	as_copy((struct addrspace*) data2, &curthread->t_addrspace);
 	as_activate(curthread->t_addrspace);
 
 	//Copy the trapframe

@@ -50,6 +50,8 @@
 
 #include "opt-synchprobs.h"
 #include "opt-defaultscheduler.h"
+struct lock *lk;
+
 
 /* Magic number used as a guard value on kernel thread stacks. */
 #define THREAD_STACK_MAGIC 0xbaadf00d
@@ -65,7 +67,7 @@ struct wchan {
 DECLARRAY(cpu);
 DEFARRAY(cpu, /*no inline*/);
 static struct cpuarray allcpus;
-struct process *ptable[256];
+static struct process *ptable[256];
 /* Used to wait for secondary CPUs to come online. */
 static struct semaphore *cpu_startup_sem;
 
@@ -147,14 +149,16 @@ thread_create(const char *name) {
 
 	/* If you add to struct thread, be sure to initialize here */
 
-	thread->t_sem = sem_create("sem",0);
+	thread->t_sem = sem_create("sem", 0);
 
 	for (int i = 0; i < OPEN_MAX; i++) {
 		thread->t_fdtable[i] = 0;
-		//thread->t_fdtable[i]->ref_count = 0;
 	}
 
 	// pid allocation
+
+	lock_acquire(lk);
+	//kprintf("lock acquired");
 	int i = 1;
 
 	while (ptable[i] != NULL ) {
@@ -165,11 +169,16 @@ thread_create(const char *name) {
 		panic("No. of processes greater than 256");
 	}
 
-	ptable[i] = (struct process*) kmalloc(sizeof(struct process));
+	struct process *p = (struct process*) kmalloc(sizeof(struct process));
+	p->pid = i;
+	p->ppid = -1;
+	p->exited = 0;
+	p->t = curthread;
+
 	thread->t_pid = i;
-	ptable[i]->pid = i;
-	//ptable[i]->ppid = -1;
-	ptable[i]->t = thread;
+	ptable[i] = p;
+	lock_release(lk);
+	//kprintf("lock released");
 	return thread;
 }
 
@@ -273,7 +282,7 @@ void thread_destroy(struct thread *thread) {
 
 	/* sheer paranoia */
 	thread->t_wchan_name = "DESTROYED";
-	sem_destroy(thread->t_sem);
+	//sem_destroy(thread->t_sem);
 	kfree(thread->t_name);
 	kfree(thread);
 }
@@ -355,7 +364,7 @@ void thread_shutdown(void) {
 void thread_bootstrap(void) {
 	struct cpu *bootcpu;
 	struct thread *bootthread;
-
+	lk = lock_create("lk");
 	cpuarray_init(&allcpus);
 
 	/*
@@ -522,7 +531,11 @@ int thread_fork(const char *name,
 	//Copy parent’s file table into child
 	for (int i = 0; i < OPEN_MAX; i++) {
 		newthread->t_fdtable[i] = curthread->t_fdtable[i];
+//		newthread->t_fdtable[i]->ref_count++;
+//		curthread->t_fdtable[i]->ref_count++;
 	}
+
+	ptable[newthread->t_pid]->ppid = curthread->t_pid;
 
 	/* Lock the current cpu's run queue and make the new thread runnable */
 	thread_make_runnable(newthread, false);

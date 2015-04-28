@@ -40,10 +40,14 @@ int main() {
 //
 //	}
 //	exit(0);
-	int pid;
+	int pid,pid2;
 
 	pid = fork();
 
-	printf("%d\n", pid);
+	printf("pid:%d\n", pid);
+
+	pid2 = fork();
+
+	printf("pid:%d\n", pid2);
 
 }
