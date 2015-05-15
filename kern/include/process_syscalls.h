@@ -12,4 +12,4 @@ void child_forkentry(void *data1, unsigned long data2);
 int sys_getpid(pid_t *retval);
 
 //Definition for waitpid
-//int sys_waitpid(pid_t pid, int *retval, int options);
+int sys_waitpid(pid_t pid, int *status, int options, pid_t *retval);

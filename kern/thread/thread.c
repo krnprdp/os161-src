@@ -67,7 +67,7 @@ struct wchan {
 DECLARRAY(cpu);
 DEFARRAY(cpu, /*no inline*/);
 static struct cpuarray allcpus;
-static struct process *ptable[256];
+
 /* Used to wait for secondary CPUs to come online. */
 static struct semaphore *cpu_startup_sem;
 

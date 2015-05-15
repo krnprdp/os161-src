@@ -43,7 +43,7 @@
 struct addrspace;
 struct cpu;
 struct vnode;
-
+struct process *ptable[256];
 
 /* get machine-dependent defs */
 #include <machine/thread.h>
@@ -147,6 +147,8 @@ struct process {
 	bool exited;
 	struct thread *t;
 	struct semaphore *sem;
+	//changed for waitpid
+	struct lock *exitlock;
 };
 
 /* Call once during system startup to allocate data structures. */
