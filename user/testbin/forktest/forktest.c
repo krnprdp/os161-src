@@ -104,7 +104,8 @@ void dowait(int nowait, int pid) {
 		/* in the fork in question we were the child; exit */
 		exit(0);
 	}
-
+	//printf("NOWAIT: %d\n",nowait);
+	//printf("PID:%d\n",pid);
 	if (!nowait) {
 		if (waitpid(pid, &x, 0) < 0) {
 			warn("waitpid");

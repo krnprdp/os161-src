@@ -126,6 +126,7 @@ struct thread {
 	//newly added
 
 	pid_t t_pid;
+	pid_t ppid;
 	struct semaphore* t_sem;
 	int status;
 
@@ -147,8 +148,6 @@ struct process {
 	bool exited;
 	struct thread *t;
 	struct semaphore *sem;
-	//changed for waitpid
-	struct lock *exitlock;
 };
 
 /* Call once during system startup to allocate data structures. */

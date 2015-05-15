@@ -118,7 +118,8 @@ void cmd_progthread(void *ptr, unsigned long nargs) {
 static
 int common_prog(int nargs, char **args) {
 	int result;
-
+	int x;
+	pid_t retval;
 	struct thread *curthread;
 	curthread = kmalloc(sizeof(struct thread*));
 
@@ -136,7 +137,11 @@ int common_prog(int nargs, char **args) {
 	}
 	//call wait pid code - need to change
 //	curthread->t_sem = sem_create("curthread",0);
-	P(curthread->t_sem);
+	//P(curthread->t_sem);
+
+	if(sys_waitpid(curthread->t_pid,&x,0,&retval)){
+		return 0;
+	}
 
 	return 0;
 }

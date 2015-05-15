@@ -52,7 +52,6 @@
 #include "opt-defaultscheduler.h"
 struct lock *lk;
 
-
 /* Magic number used as a guard value on kernel thread stacks. */
 #define THREAD_STACK_MAGIC 0xbaadf00d
 
@@ -177,6 +176,12 @@ thread_create(const char *name) {
 
 	thread->t_pid = i;
 	ptable[i] = p;
+
+	ptable[i]->sem = sem_create("t_sem", 0);
+
+
+	thread->ppid = -1;
+
 	lock_release(lk);
 	//kprintf("lock released");
 	return thread;
@@ -536,7 +541,7 @@ int thread_fork(const char *name,
 	}
 
 	ptable[newthread->t_pid]->ppid = curthread->t_pid;
-
+	newthread->ppid = curthread->t_pid;
 	/* Lock the current cpu's run queue and make the new thread runnable */
 	thread_make_runnable(newthread, false);
 
@@ -824,7 +829,8 @@ void thread_exit(void) {
 
 	/* Interrupts off on this processor */
 	splhigh();
-	//V(cur->t_sem);
+	if (cur->ppid > -1)
+		V(ptable[cur->t_pid]->sem);
 	thread_switch(S_ZOMBIE, NULL );
 	panic("The zombie walks!\n");
 }
